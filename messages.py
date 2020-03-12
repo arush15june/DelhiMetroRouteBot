@@ -13,7 +13,7 @@ Github: https://github.com/arush15june/DelhiMetroRouteBot
 """
 
 ROUTE_DEFAULT_TEXT = """
-ex. /route <Source Station> <Destination Station>
+ex. /route <Source Station> to <Destination Station>
 
 Use names from the list in /station. Station names are a closest match.
 """
