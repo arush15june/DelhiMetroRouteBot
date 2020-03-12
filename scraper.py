@@ -2,11 +2,13 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 import logging
 import asyncio
+import traceback
 
 import requests
 from bs4 import BeautifulSoup
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 """ 
@@ -94,6 +96,23 @@ class StationScraper:
 
     """ Class name to extract extra data (time, stations, interchange) from list. """
     EXTRA_DATA_DIV_CLASS = 'fr_sect1'
+
+    STATION_NAME_EXCEPTION_TRANSFORMS = {
+        'BARAKHAMBA': (lambda: 'BARAKHAMBA ROAD'),
+        'JANAK PURI WEST': (lambda: 'JANAKPURI WEST'),
+        'JANAK PURI EAST': (lambda: 'JANAKPURI EAST'),
+        'DABRI MOR': (lambda: 'DABRI MOR JANAKPURI SOUTH'),
+        'R.K.ASHRAM MARG': (lambda: 'RK ASHRAM MARG'),
+        'ESI HOSPITAL': (lambda: 'ESI BASAIDARAPUR'),
+        'SOUTH CAMPUS': (lambda: 'DURGABAI DESHMUKH SOUTH CAMPUS'),
+        'DELHI CANTT.': (lambda: 'DELHI CANTT'),
+        'SIR VISHWESHARIAH MOTI BAGH': (lambda: 'SIR VISHWESHWARAIAH MOTI BAGH'),
+        'MAUJPUR-BABARPUR': (lambda: 'MAUJPUR - BABARPUR'),
+        'RAJA NAHAR SINGH BALLABHGARH': (lambda: 'RAJA NAHAR SINGH - BALLABHGARH'),
+        'ROHINI SECTOR 18 19': (lambda: 'ROHINI SECTOR 18,19'),
+        'SHAHEED STHAL NEW BUS ADDA': (lambda: 'SHAHEED STHAL - NEW BUS ADDA'),
+        'TRILOKPURI-SANJAY LAKE': (lambda: 'TRILOKPURI - SANJAY LAKE'),
+    }
 
     def __init__(self):
         """ 
@@ -189,10 +208,28 @@ class StationScraper:
             if item.name == 'li':
                 if item.find('b') or 'Change Here' in item.text:
                     item.b.decompose()
-                    route.route.append(self.stations[item.text.strip().upper()])
+
+                    station_name = item.text.strip().upper()
+                    try:    
+                        station_name = self.STATION_NAME_EXCEPTION_TRANSFORMS[station_name]()
+                    except:
+                        pass
+                    try:
+                        route.route.append(self.stations[station_name])
+                    except:
+                        traceback.print_exc()
                     route.route.append(INTERCHANGE)
                 else:
-                    route.route.append(self.stations[item.text.strip().upper()])
+                    station_name = item.text.strip().upper()
+                    try:    
+                        station_name = self.STATION_NAME_EXCEPTION_TRANSFORMS[station_name]()
+                    except:
+                        pass
+                    
+                    try:
+                        route.route.append(self.stations[station_name])
+                    except:
+                        traceback.print_exc()
             elif item.name == 'ul':
                 self._resolve_station_list_ul(item, route)
     
@@ -329,6 +366,6 @@ class StationScraper:
 if __name__ == "__main__":
     logger.info('STARTING')
     scraper = StationScraper()
-    print(' '.join(scraper.stations))
 
-    scraper.build_station_route_cache(scraper.stations['ITO'])
+    print(' '.join(scraper.stations))
+    scraper.build_station_route_cache(scraper.stations['YAMUNA BANK'])
