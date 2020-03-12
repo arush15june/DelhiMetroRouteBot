@@ -65,7 +65,7 @@ def regular(update, context):
     try:
         chat_msg = update.message.text.replace('/route', '')
         chat_msg = chat_msg.upper()
-        frm_text, to_text = chat_msg.split(' TO ')
+        frm_text, to_text = chat_msg.split('TO')
         frm_text = frm_text
         to_text = to_text
 
@@ -95,7 +95,7 @@ def regular(update, context):
 start_handler = CommandHandler('start', start)
 route_handler = CommandHandler('route', route)
 station_handler = CommandHandler('stations', stations)
-regular_handler = MessageHandler(Filters.text, regular)
+regular_handler = MessageHandler(Filters.regex(r'.(to|TO|tO|To).'), regular)
 
 dispatcher.add_handler(start_handler)
 dispatcher.add_handler(route_handler)

@@ -4,6 +4,11 @@ Go anywhere around Delhi in the Delhi Metro! Use me to find out the routes to al
 /stations -> List of all stations.
 /route -> Get route for metro stations.
 
+Ex. Send a message to Delhi Metro Bot:
+    ITO to Dwarka
+
+and I'll tell you how to get to Dwarka from ITO.
+
 Github: https://github.com/arush15june/DelhiMetroRouteBot
 """
 
