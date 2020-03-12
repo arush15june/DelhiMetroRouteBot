@@ -65,7 +65,7 @@ def regular(update, context):
     try:
         chat_msg = update.message.text.replace('/route', '')
         chat_msg = chat_msg.upper()
-        frm_text, to_text = chat_msg.split('TO')
+        frm_text, to_text = chat_msg.split(' TO ')
         frm_text = frm_text
         to_text = to_text
 
