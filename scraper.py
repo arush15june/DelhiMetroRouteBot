@@ -159,7 +159,7 @@ class StationScraper:
         if self.station_fetch_count >= self.stations_before_save or kwargs.get('force'):
             with open(path, 'wb') as f:
                 pickle.dump(copy.deepcopy(self.stations), f)
-            self.stations_fetch_count = 0
+            self.station_fetch_count = 0
             
     def load_stations(self, path: str):
         """ Load serialized stations from disk. """
