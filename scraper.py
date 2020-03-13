@@ -169,6 +169,7 @@ class StationScraper:
     
     def persist_stations(self, **kwargs):
         if self.persist:
+            logger.info(f'saving stations to file {self.stations_file}')
             self.save_stations(self.stations_file, **kwargs)
     
     async def _scrape_init(self):
