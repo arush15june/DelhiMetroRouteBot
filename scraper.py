@@ -121,6 +121,7 @@ class StationScraper:
             list of stations by value mapping to name => self.stations_value_to_name
             route form vars => self.form_vars
         """
+        logger.info("Setting up scraper, collecting information.")
         self.stations: Dict[str, Station] = dict()
         self.stations_value_to_name: Dict[int, str] = dict()
 
@@ -156,6 +157,8 @@ class StationScraper:
         select_el = soup.find('select', id=self.FROM_SELECT_EL_ID)
         stations = [Station(name=option.text.strip().replace('\r\n', ''), value=int(option['value'])) for option in select_el if option != '\n']
         
+        logger.info(f'extracted {len(stations)} stations')
+        
         for station in stations:
             self.stations[station.name] = station
             self.stations_value_to_name[station.value] = station.name
@@ -168,6 +171,8 @@ class StationScraper:
             inp_el = soup.find('input', {'name': var_name})
             self.form_vars[var_name] = inp_el['value']
 
+        logger.info("extracted form variables")    
+        
     def generate_route_vars(self, frm: Station, to: Station):
         """  
             Generate from and to station POST payload for request to METRO_FARE_URL
@@ -284,6 +289,8 @@ class StationScraper:
             *extractors
         )
 
+        logger.info(f'''scraped route - {route.frm.name} {route.to.name} fare: {route.fare['normal']} {route.fare['concessional']} stations: {route.stations}''')
+
     async def _scrape_route(self, frm: Station, to: Station) -> Route:
         """ 
             Scrape a route from METRO_FARE_URL for Station frm to Station to.
@@ -310,7 +317,6 @@ class StationScraper:
         if to.name in frm.routes:
             return
             
-        logger.info('Scraping ' + frm.name + ' -> ' + to.name)
         scraped_route = await self._scrape_route(frm, to)
         self.stations[frm.name].routes[to.name] = scraped_route
         
