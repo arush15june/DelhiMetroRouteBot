@@ -1,4 +1,5 @@
 import scraper
+import os
 
 """ 
     Wrapper around StationScraper for rendering, cache control, updating.
@@ -6,8 +7,18 @@ import scraper
 
 class DelhiMetroWrapper:
 
+    STATIONS_FILE = 'stations.data'
+    STATION_PERSIST_ENV = 'STATIONS_PERSIST'
+    STATIONS_BEFORE_SAVE = 1
+
     def __init__(self):
-        self.scraper = scraper.StationScraper()
+        """ Load stations from file if file exists. """
+        persistence = os.getenv(self.STATION_PERSIST_ENV)
+        self.scraper = scraper.StationScraper(
+            persist=persistence,
+            file=self.STATIONS_FILE,
+            stations_before_save=self.STATIONS_BEFORE_SAVE
+        )
 
     def get_all_stations(self):
         """ Return list of all station names. """
@@ -22,7 +33,7 @@ class DelhiMetroWrapper:
 
     def _get_route(self, frm: str, to: str) -> scraper.Route:
         """ Return route for frm -> to. """
-        return self.scraper.get_route(self.scraper.stations[frm], self.scraper.stations[to])
+        route = self.scraper.get_route(self.scraper.stations[frm], self.scraper.stations[to])
     
     def _render_route(self, route: scraper.Route) -> str:
         rendered_route = f'''Route from {route.frm.name} to {route.to.name}

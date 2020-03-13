@@ -3,3 +3,4 @@ env/
 __pycache__
 .env
 bot.db
+stations.data

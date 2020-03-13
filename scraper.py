@@ -3,6 +3,8 @@ from typing import List, Dict
 import logging
 import asyncio
 import traceback
+import pickle
+import os
 
 import requests
 from bs4 import BeautifulSoup
@@ -97,6 +99,10 @@ class StationScraper:
     """ Class name to extract extra data (time, stations, interchange) from list. """
     EXTRA_DATA_DIV_CLASS = 'fr_sect1'
 
+    """ 
+        Some station names in route list result are not the same as in station
+        select dropdown, this is a list of transforms for the exceptions.
+    """
     STATION_NAME_EXCEPTION_TRANSFORMS = {
         'BARAKHAMBA': (lambda: 'BARAKHAMBA ROAD'),
         'JANAK PURI WEST': (lambda: 'JANAKPURI WEST'),
@@ -114,7 +120,9 @@ class StationScraper:
         'TRILOKPURI-SANJAY LAKE': (lambda: 'TRILOKPURI - SANJAY LAKE'),
     }
 
-    def __init__(self):
+    DEFAULT_STATIONS_FILE = 'stations.data'
+
+    def __init__(self, **kwargs):
         """ 
         Initialize scraper state,
             list of stations by name => self.stations
@@ -130,8 +138,39 @@ class StationScraper:
         self.sess.headers.update({
             'User-Agent': self.USER_AGENT
         })
-        asyncio.run(self._scrape_init())
+        
+        self.persist = kwargs.get('persist', False)
+        self.stations_before_save = kwargs.get('stations_before_save', 1)
+        self.station_fetch_count = 0
 
+        self.stations_file = kwargs.get('file', self.DEFAULT_STATIONS_FILE)
+
+        if self.stations_file is not None and os.path.exists(self.stations_file):
+            logger.info(f'loading from file {self.stations_file}')
+            self.load_stations(self.stations_file)
+        else:
+            asyncio.run(self._scrape_init())
+
+    def _serialize_stations(self):
+        """ Serialize scrapers and generate bytestream. """
+        return pickle.dumps(self.stations)
+
+    def save_stations(self, path: str, **kwargs):
+        """ Serialize in-memory stations on disk. """
+        if self.station_fetch_count >= self.stations_before_save or kwargs.get('force'):
+            with open(path, 'wb') as f:
+                pickle.dump(self.stations, f)
+            self.stations_fetch_count = 0
+            
+    def load_stations(self, path: str):
+        """ Load serialized stations from disk. """
+        with open(path, 'rb') as f:
+            self.stations = pickle.load(f)
+    
+    def persist_stations(self, **kwargs):
+        if self.persist:
+            self.save_stations(self.stations_file, **kwargs)
+    
     async def _scrape_init(self):
         """ 
         Scrape the website for initial .
@@ -149,6 +188,8 @@ class StationScraper:
         await asyncio.gather(
             *soup_extractors
         )        
+
+        self.persist_stations(force=True)
 
     async def _extract_stations(self, soup):
         """ 
@@ -326,6 +367,7 @@ class StationScraper:
         """
         if to.name not in frm.routes:
             asyncio.run(self._async_get_route(frm, to))
+            self.persist_stations()
         
         return frm.routes[to.name]
 
