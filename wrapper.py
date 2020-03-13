@@ -1,9 +1,15 @@
 import scraper
 import os
+import logging
 
 """ 
     Wrapper around StationScraper for rendering, cache control, updating.
 """
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                     level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 class DelhiMetroWrapper:
 
@@ -34,6 +40,7 @@ class DelhiMetroWrapper:
     def _get_route(self, frm: str, to: str) -> scraper.Route:
         """ Return route for frm -> to. """
         route = self.scraper.get_route(self.scraper.stations[frm], self.scraper.stations[to])
+        return route
     
     def _render_route(self, route: scraper.Route) -> str:
         rendered_route = f'''Route from {route.frm.name} to {route.to.name}
