@@ -332,6 +332,11 @@ class StationScraper:
         for i, (item) in enumerate(extra_data_list):
             data_extractors[i](item, route)
 
+        await asyncio.gather(
+            *data_extractors
+        )
+        
+
     async def _extract_route_info(self, soup, route):
         """ 
             Extract all info about a route from a soup.
