@@ -5,6 +5,7 @@ import asyncio
 import traceback
 import pickle
 import os
+import copy
 
 import requests
 from bs4 import BeautifulSoup
@@ -120,8 +121,6 @@ class StationScraper:
         'TRILOKPURI-SANJAY LAKE': (lambda: 'TRILOKPURI - SANJAY LAKE'),
     }
 
-    DEFAULT_STATIONS_FILE = 'stations.data'
-
     def __init__(self, **kwargs):
         """ 
         Initialize scraper state,
@@ -143,7 +142,7 @@ class StationScraper:
         self.stations_before_save = kwargs.get('stations_before_save', 1)
         self.station_fetch_count = 0
 
-        self.stations_file = kwargs.get('file', self.DEFAULT_STATIONS_FILE)
+        self.stations_file = kwargs.get('file')
 
         if self.stations_file is not None and os.path.exists(self.stations_file):
             logger.info(f'loading from file {self.stations_file}')
@@ -153,13 +152,13 @@ class StationScraper:
 
     def _serialize_stations(self):
         """ Serialize scrapers and generate bytestream. """
-        return pickle.dumps(self.stations)
+        return pickle.dumps(copy.deepcopy(self.stations))
 
     def save_stations(self, path: str, **kwargs):
         """ Serialize in-memory stations on disk. """
         if self.station_fetch_count >= self.stations_before_save or kwargs.get('force'):
             with open(path, 'wb') as f:
-                pickle.dump(self.stations, f)
+                pickle.dump(copy.deepcopy(self.stations), f)
             self.stations_fetch_count = 0
             
     def load_stations(self, path: str):
@@ -228,14 +227,19 @@ class StationScraper:
         """ 
             Extract fare of a route from route page soup.
         """
-        normal_fare_div = soup.find('div', {'class': self.NORMAL_FARE_DIV_CLASS})
-        concessional_fare_div = soup.find('div', {'class': self.CONCESSIONAL_FARE_DIV_CLASS})
-        
-        normal_fare = int(normal_fare_div.text)
-        concessional_fare = int(concessional_fare_div.text)
-        
-        route.fare['normal'] = normal_fare
-        route.fare['concessional'] = concessional_fare
+        try:
+            normal_fare_div = soup.find('div', {'class': self.NORMAL_FARE_DIV_CLASS})
+            concessional_fare_div = soup.find('div', {'class': self.CONCESSIONAL_FARE_DIV_CLASS})
+            
+            normal_fare = int(normal_fare_div.text)
+            concessional_fare = int(concessional_fare_div.text)
+            
+            route.fare['normal'] = normal_fare
+            route.fare['concessional'] = concessional_fare
+        except:
+            traceback.print_exc()
+            route.fare['normal'] = 0
+            route.fare['concessional'] = 0
     
     def _resolve_station_list_ul(self, station_list_soup, route):
         """  
@@ -288,6 +292,8 @@ class StationScraper:
             using self._resolve_station_list_ul which creates the route list.
         """
         stations_div = soup.find('div', {'class': self.STATION_LIST_DIV_CLASS})
+        print(soup)
+        print(stations_div)
         station_list = stations_div.find('ul')
 
         self._resolve_station_list_ul(station_list, route)    
@@ -299,14 +305,23 @@ class StationScraper:
         extra_data_div = soup.find('div', {'class': self.EXTRA_DATA_DIV_CLASS})
         extra_data_list = extra_data_div.ul
         
-        def _extract_time(item, route):
-            route.time = item.text.split(' - ')[1].split(' ')[0] # Timing - 53 Min
+        async def _extract_time(item, route):
+            try:
+                route.time = item.text.split(' - ')[1].split(' ')[0] # Timing - 53 Min
+            except:
+                route.time = 0
             
-        def _extract_stations(item, route):
-            route.stations = item.text.split(' - ')[1] #  Stations - 26
+        async def _extract_stations(item, route):
+            try:
+                route.stations = item.text.split(' - ')[1] #  Stations - 26
+            except:
+                route.stations = 0
 
-        def _extract_interchange(item, route):
-            route.interchange = item.text.split(' - ')[1] # Interchange - 3
+        async def _extract_interchange(item, route):
+            try:
+                route.interchange = item.text.split(' - ')[1] # Interchange - 3
+            except:
+                route.interchange = 0
         
         data_extractors = [
             _extract_time,
@@ -368,6 +383,7 @@ class StationScraper:
         """
         if to.name not in frm.routes:
             asyncio.run(self._async_get_route(frm, to))
+            self.stations_fetch_count += 1
             self.persist_stations()
         
         return frm.routes[to.name]
