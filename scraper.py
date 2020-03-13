@@ -293,8 +293,6 @@ class StationScraper:
             using self._resolve_station_list_ul which creates the route list.
         """
         stations_div = soup.find('div', {'class': self.STATION_LIST_DIV_CLASS})
-        print(soup)
-        print(stations_div)
         station_list = stations_div.find('ul')
 
         self._resolve_station_list_ul(station_list, route)    
