@@ -333,7 +333,7 @@ class StationScraper:
         running_tasks = []
 
         for i, (item) in enumerate(extra_data_list):
-            running_tasks.push(data_extractors[i](item, route))
+            running_tasks.append(data_extractors[i](item, route))
 
         await asyncio.gather(
             *running_tasks
