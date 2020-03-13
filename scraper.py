@@ -265,6 +265,7 @@ class StationScraper:
                         station_name = self.STATION_NAME_EXCEPTION_TRANSFORMS[station_name]()
                     except:
                         pass
+                    
                     try:
                         route.route.append(self.stations[station_name])
                     except:
@@ -329,11 +330,13 @@ class StationScraper:
             _extract_interchange
         ]
 
+        running_tasks = []
+
         for i, (item) in enumerate(extra_data_list):
-            data_extractors[i](item, route)
+            running_tasks.push(data_extractors[i](item, route))
 
         await asyncio.gather(
-            *data_extractors
+            *running_tasks
         )
         
 
