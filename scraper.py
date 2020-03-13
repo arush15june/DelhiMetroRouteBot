@@ -391,7 +391,7 @@ class StationScraper:
         """
         if to.name not in frm.routes:
             asyncio.run(self._async_get_route(frm, to))
-            self.stations_fetch_count += 1
+            self.station_fetch_count += 1
             self.persist_stations()
         
         return frm.routes[to.name]
