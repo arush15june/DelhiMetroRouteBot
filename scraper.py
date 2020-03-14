@@ -147,6 +147,7 @@ class StationScraper:
         if self.stations_file is not None and os.path.exists(self.stations_file):
             logger.info(f'loading from file {self.stations_file}')
             self.load_stations(self.stations_file)
+            asyncio.run(self._scrape_form_vars())
         else:
             asyncio.run(self._scrape_init())
 
@@ -171,6 +172,26 @@ class StationScraper:
             logger.info(f'saving stations to file {self.stations_file}')
             self.save_stations(self.stations_file, **kwargs)
     
+    async def _scrape_form_vars(self, **kwargs):
+        """ Scrape form vars. """
+        soup = kwargs.get('soup')
+
+        if not kwargs.get('soup'):
+            r = self.sess.get(self.METRO_FARE_URL)
+            soup = BeautifulSoup(r.text, 'html.parser')
+            
+        await self._extract_form_vars(soup),
+
+    async def _scrape_stations(self, **kwargs):
+        """ Scrape stations. """
+        soup = kwargs.get('soup')
+
+        if not kwargs.get('soup'):
+            r = self.sess.get(self.METRO_FARE_URL)
+            soup = BeautifulSoup(r.text, 'html.parser')
+            
+        await self._extract_stations(soup),
+    
     async def _scrape_init(self):
         """ 
         Scrape the website for initial .
@@ -181,8 +202,8 @@ class StationScraper:
         self.soup = BeautifulSoup(r.text, 'html.parser')
 
         soup_extractors = [
-            self._extract_stations(self.soup),
-            self._extract_form_vars(self.soup)
+            self._scrape_stations(soup=self.soup),
+            self._scrape_form_vars(soup=self.soup),
         ]
 
         await asyncio.gather(
