@@ -3,7 +3,7 @@ from typing import List, Dict
 import logging
 import asyncio
 import traceback
-import pickle
+import dill as pickle
 import os
 import copy
 
@@ -153,15 +153,13 @@ class StationScraper:
 
     def _serialize_stations(self):
         """ Serialize scrapers and generate bytestream. """
-        return pickle.dumps(copy.deepcopy(self.stations))
+        return pickle.dumps(self.stations)
 
     def save_stations(self, path: str, **kwargs):
         """ Serialize in-memory stations on disk. """
-        if self.station_fetch_count >= self.stations_before_save or kwargs.get('force'):
-            with open(path, 'wb') as f:
-                pickle.dump(copy.deepcopy(self.stations), f)
-            self.station_fetch_count = 0
-            
+        with open(path, 'wb') as f:
+            pickle.dump(self.stations, f)
+        
     def load_stations(self, path: str):
         """ Load serialized stations from disk. """
         with open(path, 'rb') as f:
@@ -169,9 +167,11 @@ class StationScraper:
     
     def persist_stations(self, **kwargs):
         if self.persist:
-            logger.info(f'saving stations to file {self.stations_file}')
-            self.save_stations(self.stations_file, **kwargs)
-    
+            if self.station_fetch_count >= self.stations_before_save or kwargs.get('force'):
+                logger.info(f'saving stations to file {self.stations_file}')
+                self.save_stations(self.stations_file, **kwargs)
+                self.station_fetch_count = 0
+
     async def _scrape_form_vars(self, **kwargs):
         """ Scrape form vars. """
         soup = kwargs.get('soup')
@@ -222,8 +222,9 @@ class StationScraper:
         logger.info(f'extracted {len(stations)} stations')
         
         for station in stations:
-            self.stations[station.name] = station
-            self.stations_value_to_name[station.value] = station.name
+            if station.name not in self.stations:
+                self.stations[station.name] = station
+                self.stations_value_to_name[station.value] = station.name
 
     async def _extract_form_vars(self, soup):
         """
@@ -373,7 +374,7 @@ class StationScraper:
             *extractors
         )
 
-        logger.info(f'''scraped route - {route.frm.name} {route.to.name} fare: {route.fare['normal']} {route.fare['concessional']} stations: {route.stations}''')
+        logger.debug(f'''extracted route - {route.frm.name} {route.to.name} fare: {route.fare['normal']} {route.fare['concessional']} stations: {route.stations}''')
 
     async def _scrape_route(self, frm: Station, to: Station) -> Route:
         """ 
@@ -388,7 +389,9 @@ class StationScraper:
             self.METRO_FARE_URL,
             data=form_data,
         )
+        
         route_soup = BeautifulSoup(r.text ,'html.parser')
+        logger.debug(f'Collected route: {frm.name} -> {to.name}')
         route = Route(frm=frm, to=to)
         await self._extract_route_info(route_soup, route)
 
@@ -402,7 +405,11 @@ class StationScraper:
             return
             
         scraped_route = await self._scrape_route(frm, to)
+
         self.stations[frm.name].routes[to.name] = scraped_route
+        self.station_fetch_count += 1
+        self.persist_stations()
+        logger.info(f'Collected route: {scraped_route.frm.name} -> {scraped_route.to.name}')
         
     def get_route(self, frm: Station, to: Station):
         """  
@@ -410,9 +417,7 @@ class StationScraper:
         """
         if to.name not in frm.routes:
             asyncio.run(self._async_get_route(frm, to))
-            self.station_fetch_count += 1
-            self.persist_stations()
-        
+            
         return frm.routes[to.name]
 
     async def _async_build_route_cache(self):
@@ -422,10 +427,7 @@ class StationScraper:
         running_tasks = []
         
         for frm_name, frm in self.stations.items():
-            for to_name, to in self.stations.items():
-                if frm_name == to_name:
-                    continue
-                running_tasks.append(self._async_get_route(frm, to))
+            await self._async_build_station_route_cache(frm)
                 
         await asyncio.gather(
             *running_tasks
@@ -435,7 +437,7 @@ class StationScraper:
         """ Blocking wrapper for _async_build_route_cache """
         asyncio.run(self._async_build_route_cache())
 
-    async def _async_build_station_route_cache(self, station):
+    async def _async_build_station_route_cache(self, station: Station):
         """ 
             Async implementation to build the route cache for a particular station.
         """
@@ -444,8 +446,11 @@ class StationScraper:
         for to_name, to in self.stations.items():
                 if station.name == to_name:
                     continue
-                running_tasks.append(self._async_get_route(station, to))
-                
+                if to.name not in station.routes:
+                    await self._async_get_route(station, to)
+                else:
+                    logger.info(f'Route in cache: {station.name} -> {to.name}')
+                    
         await asyncio.gather(
             *running_tasks
         )
@@ -457,7 +462,11 @@ class StationScraper:
 
 if __name__ == "__main__":
     logger.info('STARTING')
-    scraper = StationScraper()
+    scraper = StationScraper(
+        persist=True,
+        file='stations.data',
+        stations_before_save=10
+    )
 
     print(' '.join(scraper.stations))
-    scraper.build_station_route_cache(scraper.stations['YAMUNA BANK'])
+    scraper.build_route_cache()

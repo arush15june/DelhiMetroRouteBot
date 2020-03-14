@@ -42,7 +42,7 @@ class InvalidFromStationError(Exception):
 @dataclass
 class InvalidToStationError(Exception):
     """ Invalid To station text passed to /route """
-    message: str = "Error: Invalid from station"
+    message: str = "Error: Invalid to station"
 
 CLOSEST_MATCH_CUTOFF = 0.4
 

@@ -41,7 +41,7 @@ def route(update, context):
         processor.send_message(update, context, route_message)
     except processor.RouteChatException as e:
         traceback.print_exc()
-        processor.send_message(update, context, f'{e.message} \n' + messages.ROUTE_DEFAULT_TEXT)
+        processor.send_message(update, context, f'{e.message} \n {messages.ROUTE_DEFAULT_TEXT}')
 
 def stations(update, context):
     """ 
