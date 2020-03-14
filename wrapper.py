@@ -43,22 +43,25 @@ class DelhiMetroWrapper:
         return route
     
     def _render_route(self, route: scraper.Route) -> str:
-        rendered_route = f'''Route from {route.frm.name} to {route.to.name}
-Normal Fare: \u20B9{route.fare['normal']}
-Concessional Fare: \u20B9{route.fare['concessional']}
-Time: {route.time} minutes
-Stations: {route.stations}
-Interchanges: {route.interchange}
+        rendered_route = f'''Route from \U0001F6A9 {route.frm.name} to \U0001F4CD {route.to.name}
+\U0001F4B2 Normal Fare: \u20B9{route.fare['normal']}
+\U0001F3F7 Concessional Fare: \u20B9{route.fare['concessional']}
+\U0001F557 Time: {route.time} minutes
+\U0001F689 Stations: {route.stations}
+\U0001F38C Interchanges: {route.interchange}
 
 '''
 
         for station in route.route:
             if station.name == 'INTERCHANGE':
-                rendered_route += '\n'
-                rendered_route += 'INTERCHANGE'
-                rendered_route += '\n\n'
+                rendered_route += '\n\U0001F38C INTERCHANGE\n\n'
             else:
-                rendered_route += station.name + '\n'
+                if station.name == route.frm.name:
+                    rendered_route += f'\U0001F6A9 {station.name}\n' # :triangular_flag:
+                elif station.name == route.to.name:
+                    rendered_route += f'\U0001F4CD {station.name}\n' # :round_pushpin:
+                else:
+                    rendered_route += f'\U0001F687 {station.name}\n'
 
         return rendered_route
 
