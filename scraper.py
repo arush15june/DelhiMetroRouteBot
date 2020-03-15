@@ -40,8 +40,7 @@ logger = logging.getLogger(__name__)
 class Station:
     name: str
     value: int
-    # Dict[str, Route]
-    routes: dict = field(default_factory=dict)
+    routes: dict = field(default_factory=dict) # Dict[str, Route]
 
 INTERCHANGE = Station(name='INTERCHANGE', value=-1)
 
@@ -462,10 +461,16 @@ class StationScraper:
 
 if __name__ == "__main__":
     logger.info('STARTING')
+    import signal, sys
+    def signal_handler(sig, frame):
+        scraper.persist_stations(force=True)
+        sys.exit(0)
+    signal.signal(signal.SIGINT, signal_handler)
+
     scraper = StationScraper(
         persist=True,
         file='stations.data',
-        stations_before_save=10
+        stations_before_save=50
     )
 
     print(' '.join(scraper.stations))
