@@ -9,6 +9,7 @@ RUN addgroup --gid 1000 bot
 RUN adduser --disabled-password --gecos '' --uid 1000 --gid 1000 bot
 
 COPY . /home/bot/app 
+RUN chown -R 1000:1000 /home/bot/app
 USER bot
 
 WORKDIR /home/bot/app
