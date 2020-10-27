@@ -1,6 +1,5 @@
 beautifulsoup4==4.8.2
 certifi==2019.11.28
-cffi==1.14.0
 chardet==3.0.4
 cryptography==2.8
 decorator==4.4.2
